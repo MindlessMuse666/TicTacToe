@@ -9,9 +9,9 @@ public class GameState
     public int TurnsPassed { get; private set; }
     public bool GameOver { get; private set; }
 
-    public event Action<int, int> MoveMade;
-    public event Action<GameResult?> GameEnded;
-    public event Action GameRestarted;
+    public event Action<int, int>? MoveMade;
+    public event Action<GameResult?>? GameEnded;
+    public event Action? GameRestarted;
 
     public GameState()
     {
@@ -103,42 +103,28 @@ public class GameState
 
         if (AreSquaresMarked(winRow, CurrentPlayer))
         {
-            winInfo = new WinInfo
-            {
-                Type = WinType.Row,
-                Number = row
-            };
+            winInfo = new WinInfo(WinType.Row, row);
 
             return true;
         }
 
         if (AreSquaresMarked(winColumn, CurrentPlayer))
         {
-            winInfo = new WinInfo
-            {
-                Type = WinType.Column,
-                Number = column
-            };
+            winInfo = new WinInfo(WinType.Column, column);
 
             return true;
         }
 
         if (AreSquaresMarked(winDiagonal, CurrentPlayer))
         {
-            winInfo = new WinInfo
-            {
-                Type = WinType.Diagonal
-            };
+            winInfo = new WinInfo(WinType.Diagonal, default);
 
             return true;
         }
 
         if (AreSquaresMarked(winReverseDiagonal, CurrentPlayer))
         {
-            winInfo = new WinInfo
-            {
-                Type = WinType.ReverseDiagonal
-            };
+            winInfo = new WinInfo(WinType.ReverseDiagonal, default);
 
             return true;
         }
@@ -152,21 +138,14 @@ public class GameState
     {
         if (DidMoveWin(row, column, out WinInfo? winInfo))
         {
-            gameResult = new GameResult
-            {
-                Winner = CurrentPlayer,
-                WinInfo = winInfo
-            };
+            gameResult = new GameResult(CurrentPlayer, winInfo);
 
             return true;
         }
 
         if (IsGridFull())
         {
-            gameResult = new GameResult
-            {
-                Winner = Player.None,
-            };
+            gameResult = new GameResult(Player.None, null);
 
             return true;
         }
