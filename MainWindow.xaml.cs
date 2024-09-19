@@ -17,27 +17,13 @@ public partial class MainWindow : Window
     private readonly Dictionary<Player, ImageSource> _imageSources = new()
     {
         { Player.X, new BitmapImage(new Uri(ASSETS_PATH + "X15.png")) },
-        { Player.O, new BitmapImage(new Uri(ASSETS_PATH + "O15.png")) }
+        { Player.O, new BitmapImage(new Uri(ASSETS_PATH + "O15.png")) },
+        { Player.None, null }
     };
-
     private readonly Dictionary<Player, ObjectAnimationUsingKeyFrames> _animations = new()
     {
         { Player.X, new ObjectAnimationUsingKeyFrames() },
         { Player.O, new ObjectAnimationUsingKeyFrames() }
-    };
-
-    private readonly DoubleAnimation _fadeOutAnimation = new()
-    {
-        Duration = TimeSpan.FromSeconds(.5),
-        From = 1,
-        To = 0
-    };
-
-    private readonly DoubleAnimation _fadeInAnimation = new()
-    {
-        Duration = TimeSpan.FromSeconds(.5),
-        From = 0,
-        To = 1
     };
 
     private readonly Image[,] _imageControls = new Image[3, 3];
@@ -47,14 +33,15 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        ConnectEventHandlers();
-        SetupAnimations();
         SetupGameGrid();
+        SetupAnimations();
+        OnGameRestart();
     }
 
-    private void GameGrid_MouseDown(object sender, MouseButtonEventArgs e)
+
+    private void GameGrid_Click(object sender, MouseButtonEventArgs e)
     {
-        if (_gameState.CurrentPlayer != Player.X)
+        if (_gameState.CurrentPlayer != Player.O)
             return;
 
         double squareSize = GameGrid.Width / 3;
@@ -62,43 +49,39 @@ public partial class MainWindow : Window
         int row = (int)(clickPosition.Y / squareSize);
         int column = (int)(clickPosition.X / squareSize);
 
-        _gameState.MakeMove(row, column);
+        GameFlow(row, column);
     }
+
 
     private void Button_Click(object sender, RoutedEventArgs e)
     {
-        if (_gameState.GameOver)
-        {
-            _gameState.ResetGame();
-        }
+        _gameState.Reset();
+        OnGameRestart();
     }
+
 
     private void OnMoveMade(int row, int column)
     {
-        if (_gameState == null)
-            return;
-
         Player player = _gameState.GameGrid[row, column];
-
         _imageControls[row, column].BeginAnimation(Image.SourceProperty, _animations[player]);
         PlayerImage.Source = _imageSources[_gameState.CurrentPlayer];
     }
 
+
     private async void OnGameEnded(GameResult gameResult)
     {
-        await Task.Delay(1000);
+        await Task.Delay(_gameState.GameOverDelay);
 
         if (gameResult.Winner == Player.None)
-        {
-            await TransitionToEndScreen("Tie!", null);
-        }
+            TransitionToEndScreen("Tie!", null);
         else
         {
             await DrawLine(gameResult.WinInfo);
-            await Task.Delay(1000);
-            await TransitionToEndScreen("Winner:", _imageSources[gameResult.Winner]);
+            await Task.Delay(_gameState.GameOverDelay);
+            TransitionToEndScreen("Winner:", _imageSources[gameResult.Winner]);
         }
     }
+
 
     private async void OnGameRestart()
     {
@@ -113,8 +96,42 @@ public partial class MainWindow : Window
 
         PlayerImage.Source = _imageSources[_gameState.CurrentPlayer];
 
-        await TransitionToGameScreen();
+        TransitionToGameScreen();
+
+        _gameState.AIMove();
+
+        await Task.Delay(80);
+        OnMoveMade(_gameState.AIRow, _gameState.AIColumn);
     }
+
+
+    private async void GameFlow(int row, int column)
+    {
+        if (_gameState.PlayerMove(row, column) && !_gameState.GameOver)
+        {
+            OnMoveMade(row, column);
+
+            await Task.Delay(_gameState.StepDelay);
+
+            _gameState.AIMove();
+
+            if (!_gameState.GameOver)
+            {
+                OnMoveMade(_gameState.AIRow, _gameState.AIColumn);
+            }
+            else
+            {
+                OnMoveMade(_gameState.AIRow, _gameState.AIColumn);
+                OnGameEnded(_gameState.GetGameResult());
+            }
+        }
+        else if (_gameState.GameOver)
+        {
+            OnMoveMade(row, column);
+            OnGameEnded(_gameState.GetGameResult());
+        }
+    }
+
 
     private void SetupGameGrid()
     {
@@ -129,6 +146,7 @@ public partial class MainWindow : Window
             }
         }
     }
+
 
     private void SetupAnimations()
     {
@@ -151,12 +169,13 @@ public partial class MainWindow : Window
         }
     }
 
+
     private async Task DrawLine(WinInfo winInfo)
     {
         (Point start, Point end) = FindLinePoints(winInfo);
 
-        WinLine.X1 = start.X;
-        WinLine.Y1 = start.Y;
+        Line.X1 = start.X;
+        Line.Y1 = start.Y;
 
         DoubleAnimation xLineAnimation = new()
         {
@@ -172,30 +191,33 @@ public partial class MainWindow : Window
             To = end.Y
         };
 
-        WinLine.Visibility = Visibility.Visible;
+        Line.Visibility = Visibility.Visible;
 
-        WinLine.BeginAnimation(Line.X2Property, xLineAnimation);
-        WinLine.BeginAnimation(Line.Y2Property, yLineAnimation);
+        Line.BeginAnimation(Line.X2Property, xLineAnimation);
+        Line.BeginAnimation(Line.Y2Property, yLineAnimation);
 
         await Task.Delay(xLineAnimation.Duration.TimeSpan);
     }
+
 
     private (Point, Point) FindLinePoints(WinInfo winInfo)
     {
         double squareSize = GameGrid.Width / 3;
         double margin = squareSize / 2;
 
-        switch (winInfo.Type)
+        switch (winInfo.WinTypeKey)
         {
             case WinType.Row:
                 {
-                    double y = winInfo.Number * squareSize + margin;
+                    double y = winInfo.WinTypeNum * squareSize + margin;
+
                     return (new Point(0, y), new Point(GameGrid.Width, y));
                 }
 
             case WinType.Column:
                 {
-                    double x = winInfo.Number * squareSize + margin;
+                    double x = winInfo.WinTypeNum * squareSize + margin;
+
                     return (new Point(x, 0), new Point(x, GameGrid.Height));
                 }
 
@@ -207,61 +229,22 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task TransitionToEndScreen(string text, ImageSource winnerImage)
-    {
-        await Task.WhenAll(FadeOut(TurnPanel), FadeOut(GameCanvas));
 
+    private void TransitionToEndScreen(string text, ImageSource winnerImage)
+    {
+        TurnPanel.Visibility = Visibility.Hidden;
+        GameCanvas.Visibility = Visibility.Hidden;
         ResultText.Text = text;
         WinnerImage.Source = winnerImage;
-
-        await FadeIn(EndScreen);
+        EndScreen.Visibility = Visibility.Visible;
     }
 
-    private async Task TransitionToGameScreen()
+
+    private void TransitionToGameScreen()
     {
-        await FadeOut(EndScreen);
-
-        WinLine.Visibility = Visibility.Hidden;
-
-        await Task.WhenAll(FadeIn(TurnPanel), FadeIn(GameCanvas));
-    }
-
-    private async Task FadeOut(UIElement uIElement)
-    {
-        uIElement.BeginAnimation(OpacityProperty, _fadeOutAnimation);
-
-        await Task.Delay(_fadeOutAnimation.Duration.TimeSpan);
-
-        uIElement.Visibility = Visibility.Hidden;
-    }
-
-    private async Task FadeIn(UIElement uIElement)
-    {
-        uIElement.Visibility = Visibility.Visible;
-
-        uIElement.BeginAnimation(OpacityProperty, _fadeInAnimation);
-
-        await Task.Delay(_fadeInAnimation.Duration.TimeSpan);
-    }
-
-    private void ConnectEventHandlers()
-    {
-        _gameState.MoveMade += OnMoveMade;
-        _gameState.GameEnded += OnGameEnded;
-        _gameState.GameRestarted += OnGameRestart;
-    }
-
-    private void DisconnectEventHandlers()
-    {
-        _gameState.MoveMade -= OnMoveMade;
-        _gameState.GameEnded -= OnGameEnded;
-        _gameState.GameRestarted -= OnGameRestart;
-    }
-
-    protected override void OnClosed(EventArgs e)
-    {
-        DisconnectEventHandlers();
-
-        base.OnClosed(e);
+        Line.Visibility = Visibility.Hidden;
+        EndScreen.Visibility = Visibility.Hidden;
+        TurnPanel.Visibility = Visibility.Visible;
+        GameCanvas.Visibility = Visibility.Visible;
     }
 }

@@ -5,8 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TicTacToe"
         mc:Ignorable="d"
-        Title="TicTacToe" Height="450" Width="800"
-        WindowStartupLocation="CenterScreen"
+        Title="Tic Tac Toe" Height="450" Width="800"
         FontFamily="Segoe UI Light"
         Background="{StaticResource BackgroundColor}">
     <Viewbox>
@@ -17,57 +16,57 @@
             </Grid.RowDefinitions>
 
             <StackPanel x:Name="TurnPanel"
-                Orientation="Horizontal"
-                HorizontalAlignment="Center">
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center">
                 <TextBlock FontSize="54"
-                   Text="Player"
-                   Margin="0,0,0,15"/>
+                       Text="Player:"/>
                 <Image x:Name="PlayerImage"
-               Source="Assets/X15.png"
-               Height="75"/>
+                   Source="Assets/X15.png"
+                   Height="75"/>
             </StackPanel>
 
             <Canvas x:Name="GameCanvas"
-            Grid.Row="1"
-            Width="300"
-            Height="300"
-                    Margin="20">
+                Grid.Row="1"
+                Width="300"
+                Height="300"
+                Margin="30">
                 <UniformGrid x:Name="GameGrid"
-                     Width="300"
-                     Height="300"
-                     Rows="3"
-                     Columns="3"
-                     MouseDown="GameGrid_MouseDown">
+                         Width="300"
+                         Height="300"
+                         Rows="3"
+                         Columns="3"
+                         MouseDown="GameGrid_Click">
                     <UniformGrid.Background>
                         <ImageBrush ImageSource="Assets/Grid.png"/>
                     </UniformGrid.Background>
                 </UniformGrid>
-
-                <Line x:Name="WinLine"
-              Stroke="{StaticResource LineColor}"
-              StrokeThickness="10"
-              StrokeStartLineCap="Round"
-              StrokeEndLineCap="Round"
-              Visibility="Hidden"/>
+                <Line x:Name="Line"
+                  Stroke="{StaticResource LineColor}"
+                  StrokeThickness="10"
+                  StrokeStartLineCap="Round"
+                  StrokeEndLineCap="Round"
+                  Visibility="Hidden"/>
             </Canvas>
 
             <Grid x:Name="EndScreen"
-          Grid.RowSpan="2"
-          Background="{StaticResource BackgroundColor}"
-          Visibility="Hidden">
+              Grid.RowSpan="2"
+              Background="{StaticResource BackgroundColor}"
+              Visibility="Hidden">
                 <StackPanel Orientation="Vertical"
-                    VerticalAlignment="Center">
+                        VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Center">
+                            HorizontalAlignment="Center">
                         <TextBlock x:Name="ResultText"
-                           FontSize="54"
-                           Text="Winner: "
-                           Margin="0,0,0,15"/>
-                        <Image x:Name="WinnerImage"
-                       Height="75"
-                       Source="Assets/X15.png"/>
-                    </StackPanel>
+                               FontSize="54"
+                               Text="Winner: "
+                               Margin="0,0,0,15">
 
+                        </TextBlock>
+                        <Image x:Name="WinnerImage"
+                           Height="75">
+
+                        </Image>
+                    </StackPanel>
                     <Button Content="Play Again"
                     Background="{StaticResource ButtonColor}"
                     FontSize="34"
@@ -77,7 +76,9 @@
                     BorderBrush="Black"
                     Click="Button_Click"/>
                 </StackPanel>
+
             </Grid>
         </Grid>
+
     </Viewbox>
 </Window>

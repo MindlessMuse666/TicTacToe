@@ -2,4 +2,9 @@
 
 namespace TicTacToe.Game;
 
-public record WinInfo(WinType Type, int Number);
+public class WinInfo
+{
+    public Player Winner { get; set; }
+    public int WinTypeNum { get; set; }
+    public WinType WinTypeKey { get; set; }
+}

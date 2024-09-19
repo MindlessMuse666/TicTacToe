@@ -2,4 +2,8 @@
 
 namespace TicTacToe.Game;
 
-public record GameResult(Player Winner, WinInfo? WinInfo);
+public class GameResult()
+{
+    public Player Winner { get; set; }
+    public WinInfo? WinInfo { get; set; }
+}
